@@ -1,0 +1,133 @@
+1 使用launch文件
+Launch文件是ROS提供的，可以同时运行多个nodes的文件。Launch文件以一种特殊的XML格式编写，在ROS packages中使用广泛。
+1.1 运行launch文件
+$ roslaunch package_name launch_file_name
+Eg: roslaunch turtlesim example.launch
+（1）Tip1: rosrun只能运行一个nodes， roslaunch可以同时运行多个nodes.
+Tip2: launch文件可以不被包含于package中。此时，只需指出该launch文件的绝对路径，即可运行。
+$ roslaunch completely_path
+Eg：$ roslaunch ~/opt/ros/indigo/share/turtlesim/launch/example.launch
+Tip3: 为便于执行，每个node最好是相互独立的。
+（2）详细显示(request verbosity（冗长/赘言）)
+$ roslaunch -v package_name launch_file_name
+（3） 结束launch文件
+  ctrl+c
+2 创建launch文件
+(1) launch文件一般以.launch后缀作为文件名，放在package的launch文件夹下。最简单的launch文件可以仅包含几个nodes。
+(2) Launch文件是XML文件，每个XML文件必须有一个root element。而launch文件的root element由一对launch 标签定义。
+<launch>
+...
+</launch>
+Launch文件中的其他elements必须都在这一对tags之间。
+(3) launch文件的核心是一系列node elements，每个node element启动一个node。Node element看起来如下：
+<node
+  pkg=”package_name” type=”executable_name” name=”node_name”
+/>
+Tip1: 最后的“/”是必不可少的。
+Tip2: 也可以写成<node pkg=”..” type=”...” name=”...”></node>
+如果该node中有其他tags，则必须使用这种形式。
+(4) 一个node element包含三个必须的属性：pkg, type, name.
+pkg和type属性指出ROS应该运行哪个pkg中的哪个node，注意：此处的type是可执行文件的名称，而name则是可以任意给出的，它覆盖了原有文件中ros::init指定的node name。
+(5) 使用匿名（anonymous name）
+  name=”$(anon base_name)”
+(6) node 日志文件（log file）
+运行roslaunch和用rosrun运行单个节点的区别之一是，默认情况下，roslaunch运行的nodes的标准输出会重定向到log file，不显示在控制台。
+该日志文件的位置和名称如下：
+~/.ros/log/run_id/node_name-number-stdout.log
+其中，run_id是master启动后生成的特殊标识符，number是表示nodes数量的整数。如，turtlesim-1-stdout.log; teleop_key-3-stdout.log.
+(7) 输出到控制台
+用output属性， output=”screen”；这种方法仅显示一个node。
+若显示所有nodes的输出，用--screen命令行。
+$ roslaunch --screen package_name launch_file_name
+如果正在运行的文件没有显示想要对输出，可以查看该node属性集中是否有 output=”screen”.
+(8) 要求重生(request respawning)
+    开启所有nodes后，roslaunch会监视每个node，记录那些仍然活动的nodes。对于每个node，当其终止后，我们可以要求roslaunch重启该node，通过使用respawn属性。
+    respawn=”true”
+(10) 必需的nodes
+required属性与respawn相反，不能同时对同一个node使用。
+required=”true”
+当一个required node终止后，所有其他的nodes都会终止，并退出。这种命令有时很有用。比如，当一个很重要的node失败后，整个会话都会被扔掉，那些加上了respawn属性的nodes也会停止。
+(11) 在独立的窗口运行各nodes
+我们在各自的termin运行rosrun node_name；但是运行roslaunch时，所有的nodes共用一个相同的terminal，这对于那些需要从控制台输入的nodes很不方便。可以使用launch-prefix属性。
+launch-prefix=”command-prefix”
+Eg：launch-prefix=”xterm -e”
+等价于 xterm -e rosrun turtlesim turtle_teleop_key
+xterm 命令表示新建一个terminal； -e参数告诉xterm执行剩下的命令行。
+当然，launch-prefix属性不仅仅限于xterm。它可用于调试（通过gdb或valgrind），或用于降低进程的执行顺序（通过nice）.
+3 在namespace中执行nodes
+为node设置默认的namespace的常用方法——被称为“pushing down into a namespace”的进程，用于launch文件，并在其node element中指定ns属性。
+ns=”namespace”
+launch文件中的node names是relative names。同一个launch文件中，允许不同namespace中出现相同的node names。Roslaunch要求node names必须是base names——不指定任何namespaces的relative names；如果node element中出现node name为global name，则会报错。
+ 
+4 重映射names（remapping names）
+除了解析relative names和private names，ROS也支持重映射，用于修改nodes当前使用的名称。
+重映射相当于换名，每次重映射需提供一个original name和一个new name。每次node使用它的original name, ROS client library都会将其替换为remapping name。
+
+创建remapping name两种方法：
+1. 对于单个node，在命令行进行remapping(remap对象可以是node，topic等)。
+   original-name:=new-name
+Eg: $ rosrun turtlesim turtlesim_node turtle1/pose:=tim
+
+2. 在launch文件内remap names，使用remap element
+  <remap from=”original_name” to “new_name”>
+如果remap出现在launch文件开头，作为launch文件的子元素，则该remapping将被用于随后所有的nodes。如果remap作为某个node的子元素，则只用于该节点。
+Eg：<node pkg=”turtlesim” type=”turtlesim_node” name=”turtle1”>
+    <remap from =”turtle1/pose” to “tim”>
+</node>
+注意：在ROS进行remapping之前，remaping的所有name，包括original和new names，都将被解析为global names。所以，remapping之后所有的名字通常都是relative names。
+ 
+5 其他的launch elements
+5.1 including其他文件
+为包含其他launch文件，包括这些launch文件的所有nodes和parameters，用include element。
+<include file=”path-to-launch-file”>
+这种情况下，file属性必须写出该launch文件的全部路径名称，显得很繁琐。因此，常用
+<include file=”$(find package_name)/launch_file_name”/>
+注意，执行该launch文件时，roslaunch会搜索该package下的所有子目录；因此，必须给出package_name。此外，include也支持ns属性，将它的内容放进指定的namespace。
+<include file=”...” ns=”namespace_name”/>
+
+5.2 Launch arguments
+为便于launch文件重构，roslaunch支持launch arguments,也成为arguments或者args，类似于局部变量。
+注意：尽管argument和parameter有时可互换，但他们在ROS中的意义完全不同。Parameters是ROS系统使用的数值，存在parameter server上，nodes可通过ros::param::get函数编程得到，用户可通过rosparam获取。与之不同，arguments仅在launch文件内部有意义，nodes不能直接获取它们的值。
+(1)声明argument
+<arg name=”arg_name”>
+(2)指定argument的值
+Launch文件中的每个argument都必须有指定值。赋值方法有好几种。
+第一种，在命令行赋值
+$ roslaunch package_name launch_file_name arg-name:=arg_value
+第二种，在声明argument时赋值
+<arg name=”arg_name” default=”arg_name”/>
+<arg name=”arg_name” value=”arg_name”/>
+上面两行的区别在于，命令行参数可以覆盖default，但是不能重写value的值。
+(3)获取变量值
+一旦声明某个argument并赋值后，我们可以通过arg使用该argument.
+$(arg arg-name)
+如果该行出现，roslaunch将会用给定arg-name的值替换其左边的值。
+(4)将argument值传给included launch文件
+<include file=”path-to-file”>
+<arg name=”arg_name” value=”arg_value”/>
+......
+</include>
+若在launch文件中，launch文件及其包含的launch文件出现出现相同的arguments，则需在launch文件及included launch文件中同时写：
+<arg name=”arg_name” value=”$(arg arg_name)”/>
+第一个arg_name表示indluded launch文件中的argument,第二个arg_name表示launch文件中的argument.其结果是指定的argument在launch文件及included launch文件中都有相同的值。
+ 
+5.3 创建groups
+Group element可以再大型的launch文件中将指定的nodes组织起来。它有两个用处：
+其一，group可以将几个nodes放进同一个namespace
+<group ns=”namespace”>
+<node pkg=”..” .../>
+<node pkg=”..” .../>
+......
+</group>
+注意，如果grouped node已经有它自己的namespace，并且是relative name，那么该node的namespace是其relative name，并以group namespace为后缀。
+其二，group可以同时启动或者终止一组nodes。
+<group if=”0 or 1”>
+......
+</group>
+如果该属性的值是1，一切正常；如果该属性的值为0，那么group内所有的nodes都不会运行。
+同理，除了if，还有unless。
+<group unless=”0 or 1”>
+......
+</group>
+注意，这些属性的合法值只有0和1.
+另外，group element中只能使用ns，if，unless这三个属性。

@@ -1,0 +1,73 @@
+在使用ROS的情况时，首先要对工作空间catkin_ws进行创建；
+之后创建catkin程序包，在catkin_ws/src文件夹下进行创建，指令为：
+catkin_create_pkg <package_name> [depend1] [depend2] [depend3]   //创建程序包及其依赖关系
+2 编译程序包
+2.1 使用catkin_make指令
+//////////////////////////////////////////
+一个Cmake的标准工作流程：
+#在一个CMake项目里
+mkdir build
+cd build
+cmake ..   //这里的..是将目录调到build的上一级，也就是主文件夹下
+make
+make install     #(可选)
+/////////////////////////////////////////
+#在一个catkin工作空间也就是catkin_ws目录下
+catkin_make
+catkin_make install   #（可选）
+以上默认在build文件夹下编译了src文件下的所有catkin工程（~/catkin_ws/src），如果不是在这个默认的路径下需要使用：
+catkin_make --source my_src   #(my_src为自己的catkin工程所在的文件夹)
+catkin_make install --source my_src
+2.2 Catkin_ws文件夹下的三个文件
+build：是build space的默认位置，同时CMake和make也是在这里被调用来配置编译程序包的。
+devel：是development（devel） space的默认所在位置，同时也是安装程序包之前存放可执行文件和库文件的地方。
+src：存放需要便宜的catkin工程
+3 ROS节点
+3.1 节点
+一个节点其实只不过是ROS程序包中的一个可执行文件。ROS节点可以使用ROS客户端与其他节点通信。节点可以发布和接收一个话题。节点也可以提供或使用某种服务。
+3.2 相关指令
+rosnode list：可以查看正在运行的节点
+rosrun [package_name] [node_name] 运行包内的节点
+4 ROS话题
+节点之间的通信通过ROS话题来互相通信的。一个节点发布消息，另一个节点订阅消息。
+使用rqt_graph来显示当前运行的节点和话题。
+4.1 rostopic
+rostopic echo [topic]   //在一个新终端中看节点在话题上发布的数据。
+rostopic list :能够列出所有当前订阅和发布的话题
+4.2 ROS message
+rostopic type [topic] : 用来查看所发布话题的消息类型。
+rosmsg show [msg_type]: 查看消息的详细情况。           //消息就是数据类型，传的什么类型的数据要一致
+rostopic pub [topic] [msg_type] [args] : 把数据直接发布到当前某个正在广播的话题上。
+rostopic hz [topic]: 用来查看数据发布的频率。
+rosrun rqt_plot rqt_plot:实时显示一个发布到某个话题上的数据变化图形
+5 ROS服务和参数
+5.1 ROS services
+服务（services）是节点之间通讯的另一种方式。服务允许节点发送请求（request）并获得一个相应（response）。
+rosservice list : 输出可用服务的信息
+rosservice call: 调用带参数的服务
+rosservice type: 输出服务类型
+rosservice type [service]:查看服务类型
+rosservice call [service] [args]: 直接进行参数的调用
+5.2 rosparam
+rosparam set [param_name]: 设置参数
+rosparam get [param_name]: 获取参数
+rosparam load [file_name] [namespace]: 从文件读取参数
+rosparam dump [file_name]: 向文件中写入参数
+rosparam delete: 删除参数
+rosparam list : 列出参数名
+6 rqt_console和 roslaunch
+rqt_console属于ROS日志框架的一部分，用来显示节点的输出信息。
+6.1 roslaunch
+roslaunch [package] [filename.launch]: 用来启动定义在launch文件中的多个节点
+7 使用rosed编辑ROS中的文件
+rosed [package_name] [filename]: 可以直接通过package名来获取到待编辑的文件而无需指定该文件的存储路径。
+8 
+
+
+
+
+
+
+
+
+

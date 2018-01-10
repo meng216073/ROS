@@ -1,0 +1,108 @@
+############################
+msg文件实际上就是每行声明一个数据类型和变量名。可以使用的数据类型如下：
+
+int8, int16, int32, int64 (plus uint*)
+float32, float64
+string
+time, duration
+other msg files
+variable-length array[] and fixed-length array[C]
+在ROS中有一个特殊的数据类型：Header，它含有时间戳和坐标系信息。在msg文件的第一行经常可以看到Header header的声明.
+下面是一个msg文件的样例，它使用了Header，string，和其他另外两个消息类型。
+
+
+  Header header
+  string child_frame_id
+  geometry_msgs/PoseWithCovariance pose
+  geometry_msgs/TwistWithCovariance twist
+
+######################################
+srv文件分为请求和响应两部分，由'---'分隔。下面是srv的一个样例：
+
+
+int64 A
+int64 B
+---
+int64 Sum
+其中 A 和 B 是请求, 而Sum 是响应。
+#############################################
+  27#include "ros/ros.h"
+  28 #include "std_msgs/String.h"
+  29 
+  30 #include <sstream>
+  
+  35 int main(int argc, char **argv)  //主函数
+  36 {
+  
+  47   ros::init(argc, argv, "talker");//定义了主题的名称，，，这里的名称必须是一个 base name ，也就是说，名称内不能包含 / 等符号。
+  
+  54   ros::NodeHandle n;   //为这个进程创建一个句柄
+ 
+  73   ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);//消息发布
+  ///告诉 master 我们将要在 chatter（话题名） 上发布 std_msgs/String 消息类型的消息。
+  这样 master 就会告诉所有订阅了 chatter 话题的节点，将要有数据发布。第二个参数是发布序列的大小。
+  如果我们发布的消息的频率太高，缓冲区中的消息在大于 1000 个的时候就会开始丢弃先前发布的消息。////
+  74 
+  75   ros::Rate loop_rate(10);
+        ///ros::Rate 对象可以允许你指定自循环的频率。它会追踪记录自上一次调用 Rate::sleep() 后时间的流逝，并休眠直到一个频率周期的时间。
+  76 
+  77   
+  81   int count = 0;
+  82   while (ros::ok())//按ctrl-c后ok状态改变，程序停止运行
+  83   {
+  84     /**
+  85      * This is a message object. You stuff it with data, and then publish it.
+  86      */
+  87     std_msgs::String msg;
+  88 
+  89     std::stringstream ss;
+  90     ss << "hello world " << count;
+  91     msg.data = ss.str();
+  92 
+  93     ROS_INFO("%s", msg.data.c_str());  //ROS_INFO 和其他类似的函数可以用来代替 printf/cout 等函数。
+  94 
+  95    
+ 101     chatter_pub.publish(msg);   //我们向所有订阅 chatter 话题的节点发送消息。
+ 102 
+ 103     ros::spinOnce();  //在这个例子中并不是一定要调用 ros::spinOnce()，因为我们不接受回调。
+          //然而，如果你的程序里包含其他回调函数，最好在这里加上 ros::spinOnce()这一语句，否则你的回调函数就永远也不会被调用了。
+ 104 
+ 105     loop_rate.sleep();
+ 106     ++count;
+ 107   }
+ 108 
+ 109 
+ 110   return 0;
+ 111 }
+ #######################################
+  #include "ros/ros.h"
+  29 #include "std_msgs/String.h"
+  30 
+  
+  34 void chatterCallback(const std_msgs::String::ConstPtr& msg)   //定义一个函数
+  35 {
+  36   ROS_INFO("I heard: [%s]", msg->data.c_str());
+  37 }
+  38 
+  39 int main(int argc, char **argv)
+  40 {
+  41   
+  51   ros::init(argc, argv, "listener");// 定义订阅器的名称
+  52 
+  53  
+  58   ros::NodeHandle n;
+  59 
+  60   
+  75   ros::Subscriber sub = n.subscribe("chatter", 1000, chatterCallback);  //订阅话题
+        //告诉 master 我们要订阅 chatter 话题上的消息。当有消息发布到这个话题时，ROS 就会调用 chatterCallback() 函数。
+        第二个参数是队列大小，以防我们处理消息的速度不够快，当缓存达到 1000 条消息后，再有新的消息到来就将开始丢弃先前接收的消息。
+  76 
+  77  
+  82   ros::spin();
+  83 //ros::spin() 进入自循环，可以尽可能快的调用消息回调函数。
+          如果没有消息到达，它不会占用很多 CPU，所以不用担心。一旦 ros::ok() 返回 false，ros::spin() 就会立刻跳出自循环。
+         这有可能是 ros::shutdown() 被调用，或者是用户按下了 Ctrl-C，使得 master 告诉节点要终止运行。也有可能是节点被人为关闭的。
+         
+         
+  84   return 0;
+  85 }

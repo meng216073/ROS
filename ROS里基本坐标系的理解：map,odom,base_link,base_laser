@@ -47,3 +47,8 @@ fixed_frame
 RViz中认定的大世界就是fixed_frame
 target_frame
 Rviz中视觉跟踪的frame是 target_frame
+
+
+
+5.odom frame和 odom  topic
+这两个完全是不同的东西，很容易混淆。一个是地图上的一个参照系，一个是topic用来接收导航输入的。名字一样，纯属巧合！

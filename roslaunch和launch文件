@@ -1,3 +1,5 @@
+网址之一：https://blog.csdn.net/Forrest_Z/article/details/52618833
+官方网址：http://wiki.ros.org/roslaunch/XML
 1 使用launch文件
 Launch文件是ROS提供的，可以同时运行多个nodes的文件。Launch文件以一种特殊的XML格式编写，在ROS packages中使用广泛。
 1.1 运行launch文件
